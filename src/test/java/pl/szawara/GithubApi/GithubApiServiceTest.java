@@ -1,43 +1,41 @@
 package pl.szawara.GithubApi;
 
-import org.junit.Before;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.shadow.com.univocity.parsers.annotations.Headers;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
-import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestTemplate;
 import pl.szawara.GithubApi.model.*;
 import pl.szawara.GithubApi.service.GitHubApiService;
-import pl.szawara.GithubApi.service.RestMessageCreator;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
-@RunWith(MockitoJUnitRunner.class)
-class GithubApiApplicationTests {
+@ExtendWith(MockitoExtension.class)
+class GithubApiServiceTest {
 	@Mock
-	private RestTemplate restTemplate=mock(RestTemplate.class);
+	private RestTemplateBuilder restTemplateBuilder;
+	@Mock
+	private RestTemplate restTemplate;
 	@InjectMocks
-	@Spy
-
-	private GitHubApiService gitHubApiService=new GitHubApiService(new RestTemplateBuilder());
+	private GitHubApiService gitHubApiService;
 
 
-	@Before
+	@BeforeEach
 	public void setUp() {
-		MockitoAnnotations.openMocks(this);
+		when(restTemplateBuilder.build()).thenReturn(restTemplate);
+		gitHubApiService = new GitHubApiService(restTemplateBuilder);
 	}
 	@Test
 	void testGetServiceList() {
@@ -67,35 +65,35 @@ class GithubApiApplicationTests {
 		RepositoryGit[] repositoryGits={repo1,repo2,repo3};
 		ResponseEntity<RepositoryGit[]> responseEntity=ResponseEntity.ok(repositoryGits);
 		Mockito.when(restTemplate.exchange(
-				("https://api.github.com/users/user1/repos"),
-				HttpMethod.GET,
-				new HttpEntity<Void>(httpHeaders),
-				RepositoryGit[].class
+				eq("https://api.github.com/users/user1/repos"), // Here's the change
+				eq(HttpMethod.GET),
+				any(HttpEntity.class),
+				eq(RepositoryGit[].class)
 		)).thenReturn(responseEntity);
 
 		BranchGit[] branchesGit={branchGit1,branchGit2};
 		ResponseEntity<BranchGit[]> responseBranch=ResponseEntity.ok(branchesGit);
 		mockBranches("repo1",responseBranch);
-		mockBranches("repo1",responseBranch);
+		mockBranches("repo3",responseBranch);
 
 		List<RepositoryInfo> result=gitHubApiService.getRepositoryInfoList(userName);
 
 
 		Assertions.assertEquals(2,result.size());
 		Assertions.assertEquals("repo1",result.get(0).getRepositoryName());
-		Assertions.assertEquals(branchesGit,result.get(0).getBranches().toArray());
+		Assertions.assertArrayEquals(branchesGit,result.get(0).getBranches().toArray());
 		Assertions.assertEquals("sh1",result.get(0).getBranches().get(0).getCommit().getSha());
 
 		Assertions.assertEquals("repo3",result.get(1).getRepositoryName());
-		Assertions.assertEquals(branchesGit,result.get(1).getBranches().toArray());
+		Assertions.assertArrayEquals(branchesGit,result.get(1).getBranches().toArray());
 		Assertions.assertEquals("sh1",result.get(1).getBranches().get(0).getCommit().getSha());
 
 	}
 	private void mockBranches(String repoName,ResponseEntity<BranchGit[]> responseBranch){
-		Mockito.when(restTemplate.exchange("https://api.github.com/repos/user1/"+repoName+"/branches",
-				HttpMethod.GET,
-				new HttpEntity<>(new HttpHeaders()),
-				BranchGit[].class)).thenReturn(responseBranch);
+		Mockito.when(restTemplate.exchange(eq("https://api.github.com/repos/user1/"+repoName+"/branches"),
+				eq(HttpMethod.GET),
+				any(HttpEntity.class),
+				eq(BranchGit[].class))).thenReturn(responseBranch);
 	}
 
 }
