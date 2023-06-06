@@ -11,6 +11,7 @@ Gradle build tool
 
 ## Installation
 To run the GitHub API, follow these steps:
+
 1.Clone the GitHub API repository:
 ```
 git clone https://github.com/KarolSzawara/GithubApi.git
